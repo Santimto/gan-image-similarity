@@ -66,7 +66,7 @@ def generator(z, latent_c):
                         kernel_size=3):
         with tf.variable_scope("gen"):
             size = sizes.pop(0)
-            net = tf.concat(1, [z, latent_c])
+            net = tf.concat(axis=1, values=[z, latent_c])
             net = slim.fully_connected(net, depths[0] * size[0] * size[1])
             net = tf.reshape(net, [-1, size[0], size[1], depths[0]])
             for depth in depths[1:-1] + [None]:
@@ -77,7 +77,7 @@ def generator(z, latent_c):
                     net = slim.conv2d_transpose(net, depth)
             net = slim.conv2d_transpose(
                 net, depths[-1], activation_fn=tf.nn.tanh, stride=1, normalizer_fn=None)
-            tf.image_summary("gen", net, max_images=8)
+            tf.summary.image("gen", net, max_images=8)
     return net
 
 
@@ -121,7 +121,7 @@ def loss(d_model, g_model, dg_model, q_model, latent_c):
 
     # Discriminator
     d_loss = -tf.reduce_mean(tf.log(d_model + TINY) + tf.log(1. - dg_model + TINY))
-    tf.scalar_summary('d_loss', d_loss)
+    tf.summary.scalar('d_loss', d_loss)
     d_trainer = tf.train.AdamOptimizer(.0002, beta1=.5).minimize(
         d_loss + q_loss,
         global_step=global_step,
@@ -129,7 +129,7 @@ def loss(d_model, g_model, dg_model, q_model, latent_c):
 
     # Generator
     g_loss = -tf.reduce_mean(tf.log(dg_model + TINY))
-    tf.scalar_summary('g_loss', g_loss)
+    tf.summary.scalar('g_loss', g_loss)
     g_trainer = tf.train.AdamOptimizer(.001, beta1=.5).minimize(
         g_loss + q_loss,
         var_list=[v for v in t_vars if 'gen/' in v.name or 'latent_c/' in v.name])
@@ -165,9 +165,9 @@ def gan(dataset, sess):
     # tf.histogram_summary(v.name, v)
 
     # Init
-    summary = tf.merge_all_summaries()
-    summary_writer = tf.train.SummaryWriter(FLAGS.logdir, sess.graph)
-    tf.initialize_all_variables().run()
+    summary = tf.summary.merge_all()
+    summary_writer = tf.summary.FileWriter(FLAGS.logdir, sess.graph)
+    tf.global_variables_initializer().run()
 
     # Saver
     saver = tf.train.Saver(max_to_keep=10)
@@ -274,8 +274,8 @@ def export_intermediate(FLAGS, sess, dataset):
     feat_model = discriminator(x, reuse=False, dropout=dropout, int_feats=True)
 
     # Init
-    init_op = tf.group(tf.initialize_all_variables(),
-                       tf.initialize_local_variables())
+    init_op = tf.group(tf.global_variables_initializer(),
+                       tf.local_variables_initializer())
     sess.run(init_op)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
@@ -320,11 +320,11 @@ def similarity(FLAGS, sess, all_features, all_paths):
     # Distance
     x1 = tf.placeholder(tf.float32, shape=[None, all_features.shape[1]])
     x2 = tf.placeholder(tf.float32, shape=[None, all_features.shape[1]])
-    l2diff = tf.sqrt(tf.reduce_sum(tf.square(tf.sub(x1, x2)), reduction_indices=1))
+    l2diff = tf.sqrt(tf.reduce_sum(tf.square(tf.subtract(x1, x2)), axis=1))
 
     # Init
-    init_op = tf.group(tf.initialize_all_variables(),
-                       tf.initialize_local_variables())
+    init_op = tf.group(tf.global_variables_initializer(),
+                       tf.local_variables_initializer())
     sess.run(init_op)
 
     #
