@@ -77,7 +77,7 @@ def generator(z, latent_c):
                     net = slim.conv2d_transpose(net, depth)
             net = slim.conv2d_transpose(
                 net, depths[-1], activation_fn=tf.nn.tanh, stride=1, normalizer_fn=None)
-            tf.summary.image("gen", net, max_images=8)
+            tf.summary.image("gen", net, max_outputs=8)
     return net
 
 
@@ -91,7 +91,8 @@ def discriminator(input, reuse, dropout, int_feats=False, c_dim=None):
             net = input
             for i, depth in enumerate(depths):
                 if i != 0:
-                    net = slim.dropout(net, dropout, scope='dropout')
+#                    net = slim.dropout(net, dropout, scope='dropout')
+                    net = slim.dropout(net, 0.5, scope='dropout')
                 if i % 2 == 0:
                     net = slim.conv2d(
                         net, depth, kernel_size=3, stride=2, scope='conv%d' % i)
