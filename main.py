@@ -348,7 +348,7 @@ def similarity(FLAGS, sess, all_features, all_paths):
         # Pick best matches
         result += [select_images(distances)]
 
-    with open('logs/data.json', 'w') as f:
+    with open('data.json', 'w') as f:
         json.dump(dict(data=result), f)
     return
 
